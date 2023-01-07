@@ -20,6 +20,5 @@ func RunMasterServer() {
 		log.Fatal(err.Error())
 	}
 
-	for {
-	}
+	select {}
 }

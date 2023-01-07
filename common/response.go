@@ -56,6 +56,14 @@ func NewResponse(httpResp http.ResponseWriter, funs ...SetResponse) *Response { 
 	return r
 }
 
+func ReturnOkJson(httpResp http.ResponseWriter, data interface{}) {
+	NewResponse(httpResp, SetResp(Success, "请求成功", data)).ReturnJson()
+}
+
+func ReturnFailJson(httpResp http.ResponseWriter, err error) {
+	NewResponse(httpResp, SetResp(Fail, "请求失败，"+err.Error(), nil)).ReturnJson()
+}
+
 // ReturnJson json序列化，响应http请求
 func (r *Response) ReturnJson() { // todo 嫌麻烦，这里错误不返回，后续可以记录日志
 	var (
