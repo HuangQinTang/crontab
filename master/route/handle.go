@@ -71,3 +71,22 @@ ERR:
 	common.ReturnFailJson(resp, err)
 	return
 }
+
+// handleJobList 列举所有crontab任务
+func handleJobList(resp http.ResponseWriter, req *http.Request) {
+	var (
+		jobList []*common.Job
+		err     error
+	)
+
+	// 获取任务列表
+	if jobList, err = service.G_jobServ.ListJobs(); err != nil {
+		goto ERR
+	}
+
+	common.ReturnOkJson(resp, jobList)
+	return
+
+ERR:
+	common.ReturnFailJson(resp, err)
+}
