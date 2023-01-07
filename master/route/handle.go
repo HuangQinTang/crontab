@@ -73,6 +73,7 @@ ERR:
 }
 
 // handleJobList 列举所有crontab任务
+// GET /job/list
 func handleJobList(resp http.ResponseWriter, req *http.Request) {
 	var (
 		jobList []*common.Job
@@ -89,4 +90,33 @@ func handleJobList(resp http.ResponseWriter, req *http.Request) {
 
 ERR:
 	common.ReturnFailJson(resp, err)
+	return
+}
+
+// handleJobKill 强制杀死某个任务
+// POST /job/kill application/x-www-form-urlencoded name=job1
+func handleJobKill(resp http.ResponseWriter, req *http.Request) {
+	var (
+		err  error
+		name string
+	)
+
+	// 解析POST表单
+	if err = req.ParseForm(); err != nil {
+		goto ERR
+	}
+
+	// 要杀死的任务名
+	name = req.PostForm.Get("name")
+
+	// 杀死任务
+	if err = service.G_jobServ.KillJob(name); err != nil {
+		goto ERR
+	}
+
+	common.ReturnOkJson(resp, nil)
+	return
+ERR:
+	common.ReturnFailJson(resp, err)
+	return
 }

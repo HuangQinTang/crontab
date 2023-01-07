@@ -14,10 +14,6 @@ import (
 // G_jobServ 任务服务，将任务信息维护在etcd中
 var G_jobServ *JobServ
 
-const (
-	jobKeyPrefix = "/cron/jobs/"
-)
-
 type JobServ struct {
 	client *clientv3.Client
 	kv     clientv3.KV
@@ -53,7 +49,7 @@ func (jm *JobServ) SaveJob(job *common.Job) (oldJob *common.Job, err error) {
 		putResp  *clientv3.PutResponse
 	)
 
-	jobkey = fmt.Sprintf("%s%s", jobKeyPrefix, job.Name)
+	jobkey = fmt.Sprintf("%s%s", common.JOB_SAVE_DIR, job.Name)
 	if jobValue, err = json.Marshal(job); err != nil {
 		return nil, err
 	}
@@ -80,7 +76,7 @@ func (jm *JobServ) DeleteJob(name string) (oldJob *common.Job, err error) {
 	)
 
 	// etcd中保存任务的key
-	jobKey = fmt.Sprintf("%s%s", jobKeyPrefix, name)
+	jobKey = fmt.Sprintf("%s%s", common.JOB_SAVE_DIR, name)
 
 	// 从etcd中删除它
 	if delResp, err = jm.kv.Delete(context.TODO(), jobKey, clientv3.WithPrevKV()); err != nil {
@@ -109,7 +105,7 @@ func (jobMgr *JobServ) ListJobs() (jobList []*common.Job, err error) {
 	)
 
 	// 任务保存的目录
-	dirKey = jobKeyPrefix
+	dirKey = common.JOB_SAVE_DIR
 
 	// 获取目录下所有任务信息
 	if getResp, err = jobMgr.kv.Get(context.TODO(), dirKey, clientv3.WithPrefix()); err != nil {
@@ -130,4 +126,31 @@ func (jobMgr *JobServ) ListJobs() (jobList []*common.Job, err error) {
 		jobList = append(jobList, job)
 	}
 	return jobList, nil
+}
+
+// KillJob 杀死任务
+func (jobMgr *JobServ) KillJob(name string) (err error) {
+	// 更新一下key=/cron/killer/任务名
+	var (
+		killerKey      string
+		leaseGrantResp *clientv3.LeaseGrantResponse
+		leaseId        clientv3.LeaseID
+	)
+
+	// worker会监听到该key会杀死对应任务
+	killerKey = common.JOB_KILLER_DIR + name
+
+	// 让worker监听到一次put操作, 创建一个租约让其稍后自动过期即可
+	if leaseGrantResp, err = jobMgr.lease.Grant(context.TODO(), 1); err != nil {
+		return
+	}
+
+	// 租约ID
+	leaseId = leaseGrantResp.ID
+
+	// 设置killer标记
+	if _, err = jobMgr.kv.Put(context.TODO(), killerKey, "", clientv3.WithLease(leaseId)); err != nil {
+		return
+	}
+	return
 }
