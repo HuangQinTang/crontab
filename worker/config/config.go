@@ -12,9 +12,7 @@ type settings struct {
 }
 
 type Server struct {
-	Port         int   `toml:"port"`
-	ReadTimeout  int64 `toml:"readTimeout"`
-	WriteTimeout int64 `toml:"writeTimeout"`
+	Port int `toml:"port"`
 }
 
 type Etcd struct {
@@ -24,8 +22,8 @@ type Etcd struct {
 
 func init() {
 	vp := viper.New()
-	// 从项目根目录启动 go run /cmd/master/main.go （相对项目根目录，否则路径不对）
-	vp.AddConfigPath("./master/config/")
+	// 从项目根目录启动 go run cmd/worker/main.go （相对项目根目录，否则路径不对）
+	vp.AddConfigPath("./worker/config/")
 	vp.SetConfigName("config")
 	vp.SetConfigType("toml")
 	if err := vp.ReadInConfig(); err != nil {

@@ -14,11 +14,14 @@ const (
 	JOB_WORKER_DIR = "/cron/workers/"
 
 	// JOB_EVENT_SAVE 保存任务事件
-	JOB_EVENT_SAVE = 1
+	JOB_EVENT_SAVE JobEventType = 1
 
 	// JOB_EVENT_DELETE 删除任务事件
-	JOB_EVENT_DELETE = 2
+	JOB_EVENT_DELETE JobEventType = 2
 
 	// JOB_EVENT_KILL 强杀任务事件
 	JOB_EVENT_KILL = 3
 )
+
+// JobEventType 任务事件类型，对应 mvccpb.Event_EventType
+type JobEventType int32

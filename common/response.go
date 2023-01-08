@@ -60,8 +60,8 @@ func ReturnOkJson(httpResp http.ResponseWriter, data interface{}) {
 	NewResponse(httpResp, SetResp(Success, "请求成功", data)).ReturnJson()
 }
 
-func ReturnFailJson(httpResp http.ResponseWriter, err error) {
-	NewResponse(httpResp, SetResp(Fail, "请求失败，"+err.Error(), nil)).ReturnJson()
+func ReturnFailJson(httpResp http.ResponseWriter, msg string) {
+	NewResponse(httpResp, SetResp(Fail, "请求失败，"+msg, nil)).ReturnJson()
 }
 
 // ReturnJson json序列化，响应http请求

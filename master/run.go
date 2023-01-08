@@ -11,7 +11,7 @@ func RunMasterServer() {
 	var err error
 
 	// 初始化任务管理器
-	if err = service.InitJobServ(); err != nil {
+	if err = service.InitJobMgr(); err != nil {
 		log.Fatal(err.Error())
 	}
 

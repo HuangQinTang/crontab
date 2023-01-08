@@ -1,0 +1,9 @@
+[server]
+# 服务端口
+port = 8070
+
+[etcd]
+# etcd集群地址
+endPoints = ["127.0.0.1:2379"]
+# 超时时间
+dialTimeout = 50000

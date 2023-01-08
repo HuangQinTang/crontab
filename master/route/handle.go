@@ -32,7 +32,7 @@ func handleJobSave(resp http.ResponseWriter, req *http.Request) {
 		goto ERR
 	}
 	// 3.保存到etcd中
-	if oldJob, err = service.G_jobServ.SaveJob(&job); err != nil {
+	if oldJob, err = service.G_jobMgr.SaveJob(&job); err != nil {
 		goto ERR
 	}
 
@@ -40,7 +40,7 @@ func handleJobSave(resp http.ResponseWriter, req *http.Request) {
 	common.ReturnOkJson(resp, oldJob)
 	return
 ERR:
-	common.ReturnFailJson(resp, err)
+	common.ReturnFailJson(resp, err.Error())
 	return
 }
 
@@ -61,14 +61,14 @@ func handleJobDelete(resp http.ResponseWriter, req *http.Request) {
 	name = req.PostForm.Get("name")
 
 	// etcd中删除任务
-	if oldJob, err = service.G_jobServ.DeleteJob(name); err != nil {
+	if oldJob, err = service.G_jobMgr.DeleteJob(name); err != nil {
 		goto ERR
 	}
 
 	common.ReturnOkJson(resp, oldJob)
 	return
 ERR:
-	common.ReturnFailJson(resp, err)
+	common.ReturnFailJson(resp, err.Error())
 	return
 }
 
@@ -81,7 +81,7 @@ func handleJobList(resp http.ResponseWriter, req *http.Request) {
 	)
 
 	// 获取任务列表
-	if jobList, err = service.G_jobServ.ListJobs(); err != nil {
+	if jobList, err = service.G_jobMgr.ListJobs(); err != nil {
 		goto ERR
 	}
 
@@ -89,7 +89,7 @@ func handleJobList(resp http.ResponseWriter, req *http.Request) {
 	return
 
 ERR:
-	common.ReturnFailJson(resp, err)
+	common.ReturnFailJson(resp, err.Error())
 	return
 }
 
@@ -110,12 +110,12 @@ func handleJobKill(resp http.ResponseWriter, req *http.Request) {
 	name = req.PostForm.Get("name")
 
 	// 杀死任务
-	if err = service.G_jobServ.KillJob(name); err != nil {
+	if err = service.G_jobMgr.KillJob(name); err != nil {
 		goto ERR
 	}
 	common.ReturnOkJson(resp, nil)
 	return
 ERR:
-	common.ReturnFailJson(resp, err)
+	common.ReturnFailJson(resp, err.Error())
 	return
 }

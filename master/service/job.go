@@ -8,20 +8,21 @@ import (
 	"fmt"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"log"
 	"time"
 )
 
-// G_jobServ 任务服务，将任务信息维护在etcd中
-var G_jobServ *JobServ
+// G_jobServ 任务管理服务，将任务信息维护在etcd中
+var G_jobMgr *JobMgr
 
-type JobServ struct {
+type JobMgr struct {
 	client *clientv3.Client
 	kv     clientv3.KV
 	lease  clientv3.Lease
 }
 
-// InitJobServ 初始化任务服务实例
-func InitJobServ() (err error) {
+// InitJobMgr 初始化任务管理服务实例
+func InitJobMgr() (err error) {
 	var client *clientv3.Client
 
 	// 连接etcd
@@ -32,7 +33,7 @@ func InitJobServ() (err error) {
 		return err
 	}
 
-	G_jobServ = &JobServ{
+	G_jobMgr = &JobMgr{
 		client: client,
 		kv:     clientv3.NewKV(client),
 		lease:  clientv3.NewLease(client),
@@ -42,7 +43,7 @@ func InitJobServ() (err error) {
 }
 
 // SaveJob 保存任务
-func (jm *JobServ) SaveJob(job *common.Job) (oldJob *common.Job, err error) {
+func (jm *JobMgr) SaveJob(job *common.Job) (oldJob *common.Job, err error) {
 	var (
 		jobkey   string
 		jobValue []byte
@@ -59,7 +60,7 @@ func (jm *JobServ) SaveJob(job *common.Job) (oldJob *common.Job, err error) {
 		return nil, err
 	}
 	if putResp.PrevKv != nil {
-		if err = json.Unmarshal(putResp.PrevKv.Value, &oldJob); err != nil {
+		if oldJob, err = common.UnpackJob(putResp.PrevKv.Value); err != nil {
 			err = nil //旧值序列化失败也无所谓，put成功即返回nil
 			return
 		}
@@ -68,11 +69,10 @@ func (jm *JobServ) SaveJob(job *common.Job) (oldJob *common.Job, err error) {
 }
 
 // DeleteJob 删除任务
-func (jm *JobServ) DeleteJob(name string) (oldJob *common.Job, err error) {
+func (jm *JobMgr) DeleteJob(name string) (oldJob *common.Job, err error) {
 	var (
-		jobKey    string
-		delResp   *clientv3.DeleteResponse
-		oldJobObj common.Job
+		jobKey  string
+		delResp *clientv3.DeleteResponse
 	)
 
 	// etcd中保存任务的key
@@ -86,17 +86,16 @@ func (jm *JobServ) DeleteJob(name string) (oldJob *common.Job, err error) {
 	// 返回被删除的任务信息
 	if len(delResp.PrevKvs) != 0 {
 		// 解析一下旧值, 返回它
-		if err = json.Unmarshal(delResp.PrevKvs[0].Value, &oldJobObj); err != nil {
+		if oldJob, err = common.UnpackJob(delResp.PrevKvs[0].Value); err != nil {
 			err = nil
 			return
 		}
-		oldJob = &oldJobObj
 	}
 	return oldJob, nil
 }
 
 // ListJobs 列举任务
-func (jobMgr *JobServ) ListJobs() (jobList []*common.Job, err error) {
+func (jobMgr *JobMgr) ListJobs() (jobList []*common.Job, err error) {
 	var (
 		dirKey  string
 		getResp *clientv3.GetResponse
@@ -113,13 +112,14 @@ func (jobMgr *JobServ) ListJobs() (jobList []*common.Job, err error) {
 	}
 
 	// 初始化数组空间
-	jobList = make([]*common.Job, 0)
+	jobList = make([]*common.Job, 0, getResp.Count)
 	// len(jobList) == 0
 
 	// 遍历所有任务, 进行反序列化
 	for _, kvPair = range getResp.Kvs {
 		job = &common.Job{}
-		if err = json.Unmarshal(kvPair.Value, job); err != nil {
+		if job, err = common.UnpackJob(kvPair.Value); err != nil {
+			log.Println(err.Error())
 			err = nil
 			continue
 		}
@@ -129,7 +129,7 @@ func (jobMgr *JobServ) ListJobs() (jobList []*common.Job, err error) {
 }
 
 // KillJob 杀死任务
-func (jobMgr *JobServ) KillJob(name string) (err error) {
+func (jobMgr *JobMgr) KillJob(name string) (err error) {
 	// 更新一下key=/cron/killer/任务名
 	var (
 		killerKey      string
