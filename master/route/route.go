@@ -11,5 +11,8 @@ func InitRouter() *http.ServeMux {
 	mux.HandleFunc("/job/list", handleJobList)     // 任务列表
 	mux.HandleFunc("/job/kill", handleJobKill)     // 强制杀死任务
 
+	// 静态文件服务
+	staticHandler := http.FileServer(http.Dir("./static"))
+	mux.Handle("/", http.StripPrefix("/", staticHandler))
 	return mux
 }

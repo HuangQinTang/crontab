@@ -113,7 +113,6 @@ func handleJobKill(resp http.ResponseWriter, req *http.Request) {
 	if err = service.G_jobServ.KillJob(name); err != nil {
 		goto ERR
 	}
-
 	common.ReturnOkJson(resp, nil)
 	return
 ERR:
