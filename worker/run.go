@@ -1,6 +1,7 @@
 package worker
 
 import (
+	_ "crontab/worker/config"
 	"crontab/worker/service"
 	"log"
 )
@@ -15,4 +16,6 @@ func RunWorker() {
 	if err = service.InitJobMgr(); err != nil {
 		log.Fatal(err.Error())
 	}
+
+	select {}
 }

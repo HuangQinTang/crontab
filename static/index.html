@@ -215,9 +215,13 @@
                 type: 'post',
                 dataType: 'json',
                 data: {job: JSON.stringify(jobInfo)},
-                complete: function() {
-                    window.location.reload()
-                }
+                success:function (resp) {
+                    if (resp.errno != 0) {
+                        alert(resp.msg)
+                    } else {
+                        window.location.reload()
+                    }
+                },
             })
         })
         // 新建任务

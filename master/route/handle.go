@@ -5,6 +5,7 @@ import (
 	"crontab/master/service"
 	"encoding/json"
 	"errors"
+	"github.com/gorhill/cronexpr"
 	"net/http"
 )
 
@@ -31,6 +32,11 @@ func handleJobSave(resp http.ResponseWriter, req *http.Request) {
 	if err = json.Unmarshal([]byte(postJob), &job); err != nil {
 		goto ERR
 	}
+	if _, err = cronexpr.Parse(job.CronExpr); err != nil {
+		err = errors.New("cron表达式解析失败，请检查格式")
+		goto ERR
+	}
+
 	// 3.保存到etcd中
 	if oldJob, err = service.G_jobMgr.SaveJob(&job); err != nil {
 		goto ERR

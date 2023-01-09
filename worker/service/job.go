@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"crontab/common"
-	"crontab/master/config"
+	"crontab/worker/config"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"time"
 )
 
-// G_jobServ 任务管理服务，监听etcd中到任务数据，将收到到数据变化发送到调度服务
+// G_jobMgr 任务管理服务，监听etcd中到任务数据，将收到到数据变化发送到调度服务
 var G_jobMgr *JobMgr
 
 type JobMgr struct {
@@ -32,9 +32,10 @@ func InitJobMgr() (err error) {
 	}
 
 	G_jobMgr = &JobMgr{
-		client: client,
-		kv:     clientv3.NewKV(client),
-		lease:  clientv3.NewLease(client),
+		client:  client,
+		kv:      clientv3.NewKV(client),
+		lease:   clientv3.NewLease(client),
+		watcher: clientv3.NewWatcher(client),
 	}
 
 	go G_jobMgr.watchJobs()
@@ -100,5 +101,5 @@ func (jm *JobMgr) watchJobs() (err error) {
 			}
 		}
 	}()
-	return
+	return err
 }

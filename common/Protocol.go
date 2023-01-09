@@ -2,6 +2,8 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/gorhill/cronexpr"
 	"strings"
 	"time"
@@ -55,7 +57,7 @@ type JobSchedulePlan struct {
 	NextTime time.Time            // 下次调度时间
 }
 
-// 构造任务执行计划
+// BuildJobSchedulePlan 构造任务执行计划
 func BuildJobSchedulePlan(job *Job) (jobSchedulePlan *JobSchedulePlan, err error) {
 	var (
 		expr *cronexpr.Expression
@@ -63,7 +65,7 @@ func BuildJobSchedulePlan(job *Job) (jobSchedulePlan *JobSchedulePlan, err error
 
 	// 解析JOB的cron表达式
 	if expr, err = cronexpr.Parse(job.CronExpr); err != nil {
-		return
+		return nil, errors.New(fmt.Sprintf("任务: %s，cron_expr 表达式: %s，解析错误，错误原因：%s", job.Name, job.CronExpr, err.Error()))
 	}
 
 	// 生成任务调度计划对象

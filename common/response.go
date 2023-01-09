@@ -79,11 +79,11 @@ func (r *Response) ReturnJson() { // todo 嫌麻烦，这里错误不返回，�
 	// 设置状态码
 	if r.httpStatus != 0 {
 		r.httpResp.WriteHeader(r.httpStatus)
-	} else { //未设置状态吗，默认 Errno = 0, 响应 http.StatusOK。 否则响应 http.StatusBadRequest。
+	} else { //未设置状态吗，默认 Errno = 0, 响应 http.StatusOK。 否则响应 http.StatusAccepted
 		if r.Errno == 0 {
 			r.httpResp.WriteHeader(http.StatusOK)
 		} else {
-			r.httpResp.WriteHeader(http.StatusBadRequest)
+			r.httpResp.WriteHeader(http.StatusAccepted)
 		}
 	}
 
