@@ -7,3 +7,8 @@ port = 8070
 endPoints = ["127.0.0.1:2379"]
 # 超时时间
 dialTimeout = 50000
+
+
+[bash]
+# shell路径
+path = "/bin/bash"

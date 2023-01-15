@@ -2,11 +2,18 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
 
 type Errno int
+
+var (
+	ERR_LOCK_ALREADY_REQUIRED = errors.New("锁已被占用（任务可能在其他节点执行中）")
+
+	ERR_NO_LOCAL_IP_FOUND = errors.New("没有找到网卡IP")
+)
 
 const (
 	Success Errno = 0

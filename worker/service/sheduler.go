@@ -4,7 +4,6 @@ import (
 	"crontab/common"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 )
 
@@ -13,16 +12,19 @@ var G_scheduler *Scheduler
 
 // Scheduler 任务调度
 type Scheduler struct {
-	jobEventChan chan *common.JobEvent              //  etcd任务事件队列
-	jobPlanTable map[string]*common.JobSchedulePlan // 任务调度计划表，key是任务名，value是任务的执行计划(任务数据、执行时间)
-	mu           sync.Mutex                         // 保护 jobPlanTable
+	jobEventChan      chan *common.JobEvent              // etcd任务事件队列
+	jobPlanTable      map[string]*common.JobSchedulePlan // 任务调度计划表，key是任务名，value是任务的执行计划(任务数据、执行时间)
+	jobExecutingTable map[string]*common.JobExecuteInfo  // 任务执行表，key正在执行的任务名，value任务执行信息
+	jobResultChan     chan *common.JobExecuteResult      // 任务结果队列
 }
 
 // InitJobScheduler 初始化调度器
 func InitJobScheduler() {
 	G_scheduler = &Scheduler{
-		jobEventChan: make(chan *common.JobEvent, 1000),
-		jobPlanTable: make(map[string]*common.JobSchedulePlan),
+		jobEventChan:      make(chan *common.JobEvent, 1000),
+		jobPlanTable:      make(map[string]*common.JobSchedulePlan),
+		jobExecutingTable: make(map[string]*common.JobExecuteInfo),
+		jobResultChan:     make(chan *common.JobExecuteResult),
 	}
 	// 启动调度协程
 	go G_scheduler.scheduleLoop()
@@ -33,8 +35,9 @@ func InitJobScheduler() {
 func (scheduler *Scheduler) scheduleLoop() {
 	var (
 		jobEvent      *common.JobEvent
-		scheduleAfter time.Duration //下次调度的时间
-		scheduleTimer *time.Timer   //定时器
+		scheduleAfter time.Duration            //下次调度的时间
+		scheduleTimer *time.Timer              //定时器
+		jobResult     *common.JobExecuteResult //任务执行结果
 	)
 
 	// 计算下次调度的时间(任务为空时，默认1秒)
@@ -50,6 +53,8 @@ func (scheduler *Scheduler) scheduleLoop() {
 			// 对内存中维护的任务列表做增删改查
 			scheduler.handleJobEvent(jobEvent)
 		case <-scheduleTimer.C: // 最近的任务到期了
+		case jobResult = <-scheduler.jobResultChan: // 监听任务执行结果
+			scheduler.handleJobResult(jobResult)
 		}
 
 		// 尝试调度一次任务，返回下个需要执行的任务时间戳
@@ -79,8 +84,8 @@ func (scheduler *Scheduler) trySchedule() (scheduleAfter time.Duration) {
 	// 遍历所有任务
 	for _, jobPlan = range scheduler.jobPlanTable {
 		if jobPlan.NextTime.Before(now) || jobPlan.NextTime.Equal(now) { //现在就要执行的任务
-			// todo 执行任务,待实现，先简单打印...
-			fmt.Println(time.Now().Format(time.Stamp), "任务名称:", jobPlan.Job.Name, "任务内容", jobPlan.Job.Command)
+			scheduler.startJob(jobPlan)
+			//fmt.Println(time.Now().Format(time.Stamp), "任务名称:", jobPlan.Job.Name, "任务内容", jobPlan.Job.Command)
 			jobPlan.NextTime = jobPlan.Expr.Next(now) // 更新下次执行时间
 		}
 
@@ -94,12 +99,40 @@ func (scheduler *Scheduler) trySchedule() (scheduleAfter time.Duration) {
 	return scheduleAfter
 }
 
+// startJob 执行任务
+func (scheduler *Scheduler) startJob(jobPlan *common.JobSchedulePlan) {
+	// 调度 和 执行 是2件事情
+	var (
+		jobExecuteInfo *common.JobExecuteInfo
+		jobExecuting   bool
+	)
+
+	// 执行的任务可能运行很久, 1分钟会调度60次，但是只能执行1次, 防止并发！
+	// 如果任务正在执行，跳过本次调度
+	if jobExecuteInfo, jobExecuting = scheduler.jobExecutingTable[jobPlan.Job.Name]; jobExecuting {
+		//fmt.Printf("%s,存在尚未退出的携程,跳过执行:", jobPlan.Job.Name)
+		return
+	}
+
+	// 构建执行状态信息
+	jobExecuteInfo = common.BuildJobExecuteInfo(jobPlan)
+
+	// 保存执行状态
+	scheduler.jobExecutingTable[jobPlan.Job.Name] = jobExecuteInfo
+
+	// 执行任务
+	//fmt.Println("执行任务:", jobExecuteInfo.Job.Name, jobExecuteInfo.PlanTime, jobExecuteInfo.RealTime)
+	G_executor.ExecuteJob(jobExecuteInfo)
+}
+
 // handleJobEvent 处理任务事件
 func (scheduler *Scheduler) handleJobEvent(jobEvent *common.JobEvent) {
 	var (
 		jobSchedulePlan *common.JobSchedulePlan
 		jobExisted      bool
 		err             error
+		jobExecuteInfo  *common.JobExecuteInfo
+		jobExecuting    bool
 	)
 	switch jobEvent.EventType {
 	case common.JOB_EVENT_SAVE: // 保存任务事件
@@ -107,14 +140,15 @@ func (scheduler *Scheduler) handleJobEvent(jobEvent *common.JobEvent) {
 			log.Println(err.Error())
 			return
 		}
-		scheduler.mu.Lock()
 		scheduler.jobPlanTable[jobEvent.Job.Name] = jobSchedulePlan
-		scheduler.mu.Unlock()
 	case common.JOB_EVENT_DELETE: // 删除任务事件
 		if jobSchedulePlan, jobExisted = scheduler.jobPlanTable[jobEvent.Job.Name]; jobExisted {
-			scheduler.mu.Lock()
 			delete(scheduler.jobPlanTable, jobEvent.Job.Name)
-			scheduler.mu.Unlock()
+		}
+	case common.JOB_EVENT_KILL: // 强杀任务事件
+		// 取消掉Command执行, 判断任务是否在执行中
+		if jobExecuteInfo, jobExecuting = scheduler.jobExecutingTable[jobEvent.Job.Name]; jobExecuting {
+			jobExecuteInfo.CancelFunc() // 触发command杀死shell子进程, 任务得到退出
 		}
 	}
 }
@@ -122,4 +156,16 @@ func (scheduler *Scheduler) handleJobEvent(jobEvent *common.JobEvent) {
 // PushJobEvent 推送任务变化事件
 func (scheduler *Scheduler) PushJobEvent(jobEvent *common.JobEvent) {
 	scheduler.jobEventChan <- jobEvent
+}
+
+// PushJobResult 回传任务执行结果
+func (scheduler *Scheduler) PushJobResult(jobResult *common.JobExecuteResult) {
+	scheduler.jobResultChan <- jobResult
+}
+
+// handleJobResult 处理任务结果
+func (scheduler *Scheduler) handleJobResult(result *common.JobExecuteResult) {
+	// todo 后续存入mongodb
+	fmt.Printf("执行结果，%#v, 错误%v\n", result.ExecuteInfo.Job.Name, result.Err)
+	delete(scheduler.jobExecutingTable, result.ExecuteInfo.Job.Name)
 }

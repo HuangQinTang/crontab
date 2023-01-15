@@ -9,6 +9,7 @@ var G_settings settings
 type settings struct {
 	Server Server `toml:"server"`
 	Etcd   Etcd   `toml:"etcd"`
+	Bash   Bash   `toml:"bash"`
 }
 
 type Server struct {
@@ -18,6 +19,10 @@ type Server struct {
 type Etcd struct {
 	EndPoints   []string `toml:"endPoints"`
 	DialTimeout int64    `toml:"dialTimeout"`
+}
+
+type Bash struct {
+	Path string `toml:"path"`
 }
 
 func init() {
