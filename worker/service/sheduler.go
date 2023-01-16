@@ -2,7 +2,6 @@ package service
 
 import (
 	"crontab/common"
-	"fmt"
 	"log"
 	"time"
 )
@@ -24,7 +23,7 @@ func InitJobScheduler() {
 		jobEventChan:      make(chan *common.JobEvent, 1000),
 		jobPlanTable:      make(map[string]*common.JobSchedulePlan),
 		jobExecutingTable: make(map[string]*common.JobExecuteInfo),
-		jobResultChan:     make(chan *common.JobExecuteResult),
+		jobResultChan:     make(chan *common.JobExecuteResult, 1000),
 	}
 	// 启动调度协程
 	go G_scheduler.scheduleLoop()
@@ -165,7 +164,28 @@ func (scheduler *Scheduler) PushJobResult(jobResult *common.JobExecuteResult) {
 
 // handleJobResult 处理任务结果
 func (scheduler *Scheduler) handleJobResult(result *common.JobExecuteResult) {
-	// todo 后续存入mongodb
-	fmt.Printf("执行结果，%#v, 错误%v\n", result.ExecuteInfo.Job.Name, result.Err)
+	var (
+		jobLog *common.JobLog
+	)
+	// 删除执行状态
 	delete(scheduler.jobExecutingTable, result.ExecuteInfo.Job.Name)
+
+	// 生成执行日志
+	if result.Err != common.ERR_LOCK_ALREADY_REQUIRED {
+		jobLog = &common.JobLog{
+			JobName:      result.ExecuteInfo.Job.Name,
+			Command:      result.ExecuteInfo.Job.Command,
+			Output:       string(result.Output),
+			PlanTime:     result.ExecuteInfo.PlanTime.UnixNano() / 1000 / 1000,
+			ScheduleTime: result.ExecuteInfo.RealTime.UnixNano() / 1000 / 1000,
+			StartTime:    result.StartTime.UnixNano() / 1000 / 1000,
+			EndTime:      result.EndTime.UnixNano() / 1000 / 1000,
+		}
+		if result.Err != nil {
+			jobLog.Err = result.Err.Error()
+		} else {
+			jobLog.Err = ""
+		}
+		G_logSink.Append(jobLog)
+	}
 }

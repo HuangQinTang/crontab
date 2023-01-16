@@ -1,6 +1,8 @@
 [server]
 # 服务端口
 port = 8070
+# bash路径
+bashPath = "/bin/bash"
 
 [etcd]
 # etcd集群地址
@@ -8,7 +10,14 @@ endPoints = ["127.0.0.1:2379"]
 # 超时时间
 dialTimeout = 50000
 
+[mongodb]
+# mongodb地址
+host= "127.0.0.1:27017"
+# 连接超时时间(毫秒)
+timeOut = "5000"
 
-[bash]
-# shell路径
-path = "/bin/bash"
+[log]
+# 日志批次大小
+batchSize = 100
+# 批次未达到阀值之前, 超时会自动提交batch(毫秒)
+autoCommit = 1000

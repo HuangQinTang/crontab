@@ -9,6 +9,11 @@ import (
 func RunWorker() {
 	var err error
 
+	// 4.日志落盘服务，将执行器处理任务的结果记录到mongodb中
+	if err = service.InitLogSink(); err != nil {
+		log.Fatal(err.Error())
+	}
+
 	// 3.任务执行器，启动一个协程，执行调度器传过来的任务
 	service.InitExecutor()
 

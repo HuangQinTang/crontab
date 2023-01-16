@@ -54,7 +54,7 @@ func (executor *Executor) ExecuteJob(info *common.JobExecuteInfo) {
 			result.StartTime = time.Now()
 
 			// 执行shell命令
-			cmd = exec.CommandContext(info.CancelCtx, config.G_settings.Bash.Path, "-c", info.Job.Command)
+			cmd = exec.CommandContext(info.CancelCtx, config.G_settings.Server.BashPath, "-c", info.Job.Command)
 
 			// 执行并捕获输出
 			output, err = cmd.CombinedOutput()

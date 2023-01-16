@@ -7,13 +7,15 @@ import (
 var G_settings settings
 
 type settings struct {
-	Server Server `toml:"server"`
-	Etcd   Etcd   `toml:"etcd"`
-	Bash   Bash   `toml:"bash"`
+	Server  Server  `toml:"server"`
+	Etcd    Etcd    `toml:"etcd"`
+	Mongodb Mongodb `toml:"mongodb"`
+	Log     Log     `toml:"log"`
 }
 
 type Server struct {
-	Port int `toml:"port"`
+	Port     int    `toml:"port"`
+	BashPath string `toml:"bashPath"`
 }
 
 type Etcd struct {
@@ -21,8 +23,14 @@ type Etcd struct {
 	DialTimeout int64    `toml:"dialTimeout"`
 }
 
-type Bash struct {
-	Path string `toml:"path"`
+type Mongodb struct {
+	Host    string `toml:"host"`
+	TimeOut int64  `toml:"timeOut"`
+}
+
+type Log struct {
+	BatchSize  int `toml:"batchSize"`
+	AutoCommit int `toml:"autoCommit"`
 }
 
 func init() {
