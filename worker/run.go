@@ -25,5 +25,9 @@ func RunWorker() {
 		log.Fatal(err.Error())
 	}
 
+	// 5.服务注册
+	if err = service.InitRegister(); err != nil {
+		log.Fatal(err.Error())
+	}
 	select {}
 }
