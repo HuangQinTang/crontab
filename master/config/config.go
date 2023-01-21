@@ -7,8 +7,9 @@ import (
 var G_settings settings
 
 type settings struct {
-	Server Server `toml:"server"`
-	Etcd   Etcd   `toml:"etcd"`
+	Server  Server  `toml:"server"`
+	Etcd    Etcd    `toml:"etcd"`
+	Mongodb Mongodb `toml:"mongodb"`
 }
 
 type Server struct {
@@ -20,6 +21,11 @@ type Server struct {
 type Etcd struct {
 	EndPoints   []string `toml:"endPoints"`
 	DialTimeout int64    `toml:"dialTimeout"`
+}
+
+type Mongodb struct {
+	Host    string `toml:"host"`
+	TimeOut int64  `toml:"timeOut"`
 }
 
 func init() {

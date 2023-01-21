@@ -4,7 +4,6 @@ import (
 	"context"
 	"crontab/common"
 	"crontab/worker/config"
-	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"net"
 	"time"
@@ -124,7 +123,7 @@ func InitRegister() (err error) {
 	if localIp, err = getLocalIP(); err != nil {
 		return err
 	}
-	fmt.Println(localIp)
+	//fmt.Println(localIp)
 
 	// 得到KV和Lease的API子集
 	kv = clientv3.NewKV(client)

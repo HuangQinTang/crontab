@@ -11,3 +11,9 @@ writeTimeout = 5000
 endPoints = ["127.0.0.1:2379"]
 # 超时时间
 dialTimeout = 50000
+
+[mongodb]
+# mongodb地址
+host= "127.0.0.1:27017"
+# 连接超时时间(毫秒)
+timeOut = "5000"

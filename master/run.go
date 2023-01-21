@@ -15,6 +15,11 @@ func RunMasterServer() {
 		log.Fatal(err.Error())
 	}
 
+	// 初始化日志管理器
+	if err = service.InitLogMgr(); err != nil {
+		log.Fatal(err.Error())
+	}
+
 	// 启动Api http服务
 	if err = route.InitApiServer(); err != nil {
 		log.Fatal(err.Error())
